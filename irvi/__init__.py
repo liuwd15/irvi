@@ -2,10 +2,12 @@
 
 __version__ = "0.1.0"
 
-from .model import IRVI
-from .module import IRVAE
-
+# Define exports 
 __all__ = [
     "IRVI",
     "IRVAE",
 ]
+
+# Import main classes
+from .model import IRVI
+from .module import IRVAE
