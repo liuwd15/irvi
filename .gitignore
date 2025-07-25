@@ -137,15 +137,12 @@ dmypy.json
 # MacOS
 .DS_Store
 
-# Data files
+# Data files (but not Python package directories)
 *.h5ad
 *.h5
 *.csv
 *.tsv
 *.txt
-data/
-results/
-outputs/
 
 # Logs
 logs/
