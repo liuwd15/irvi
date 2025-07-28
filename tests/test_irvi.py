@@ -243,7 +243,7 @@ class TestIRVAE:
         assert hasattr(loss_output, "loss")
         assert hasattr(loss_output, "reconstruction_loss")
         assert hasattr(loss_output, "kl_local")
-        assert torch.isscalar(loss_output.loss) or loss_output.loss.dim() == 0
+        assert loss_output.loss.numel() == 1  # Check if it's a scalar tensor
 
 
 class TestIRVI:
@@ -356,8 +356,8 @@ class TestTCRField:
         """Test TCR field initialization."""
         field = TCRField("TCR", "tcr_key", max_length=20)
 
-        assert field.attr_name == "TCR"
-        assert field.attr_key == "tcr_key"
+        assert field.attr_name == "obsm"  # TCRField stores processed data in obsm
+        assert field.attr_key == "_scvi_TCR"  # TCRField uses processed key
         assert field.max_length == 20
 
 
