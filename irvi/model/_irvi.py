@@ -24,12 +24,12 @@ logger = logging.getLogger(__name__)
 
 class IRVI(UnsupervisedTrainingMixin, BaseMinifiedModeModelClass):
     """Multimodal Transformer-based model for gene expression and TCR data.
-    
-    This model integrates single-cell gene expression data with T cell receptor (TCR) 
+
+    This model integrates single-cell gene expression data with T cell receptor (TCR)
     amino acid sequences using a transformer-based variational autoencoder architecture.
     The model can extract meaningful latent embeddings that capture both gene expression
     patterns and TCR sequence information.
-    
+
     Parameters
     ----------
     adata
@@ -53,30 +53,30 @@ class IRVI(UnsupervisedTrainingMixin, BaseMinifiedModeModelClass):
         Dropout rate applied throughout the model.
     gene_likelihood
         Likelihood function for gene expression data reconstruction.
-        
+
     Examples
     --------
     >>> import anndata as ad
     >>> import numpy as np
     >>> import torch
-    >>> 
+    >>>
     >>> # Create example data
     >>> n_obs, n_vars = 1000, 200
     >>> X = np.random.negative_binomial(10, 0.3, size=(n_obs, n_vars))
-    >>> 
+    >>>
     >>> # TCR sequences as amino acid strings
     >>> tcr_seqs = ["CASSLAPGTQVQETQY", "CASSLVGQNTEAFF"] * (n_obs // 2)
     >>> if n_obs % 2:
     >>>     tcr_seqs.append("CASRPGQGATEAFF")
-    >>> 
+    >>>
     >>> adata = ad.AnnData(X=X)
     >>> adata.obs['TCR'] = tcr_seqs  # Store as strings in obs
-    >>> 
+    >>>
     >>> # Setup and train model
     >>> IRVI.setup_anndata(adata, tcr_key='TCR')
     >>> model = IRVI(adata, n_latent=10)
     >>> model.train(max_epochs=100)
-    >>> 
+    >>>
     >>> # Get latent embeddings
     >>> latent = model.get_latent_representation()
     """
@@ -128,21 +128,25 @@ class IRVI(UnsupervisedTrainingMixin, BaseMinifiedModeModelClass):
     @classmethod
     @setup_anndata_dsp.dedent
     def setup_anndata(
-        cls, adata: AnnData, layer: str | None = None, tcr_key: str = "TCR", **kwargs,
+        cls,
+        adata: AnnData,
+        layer: str | None = None,
+        tcr_key: str = "TCR",
+        **kwargs,
     ) -> AnnData:
         """%(summary)s.
-        
+
         Parameters
         ----------
         %(param_adata)s
         %(param_layer)s
         tcr_key
-            Key in `adata.obs` or `adata.obsm` where TCR sequence data is stored. 
+            Key in `adata.obs` or `adata.obsm` where TCR sequence data is stored.
             Should contain amino acid sequences as strings (e.g., "CASSLAPGTQVQETQY").
             If in adata.obs, should be a pandas Series of strings.
             If in adata.obsm, can be array of strings or pre-tokenized integers.
         %(param_kwargs)s
-            
+
         Returns
         -------
         %(return_adata)s
@@ -177,7 +181,7 @@ class IRVI(UnsupervisedTrainingMixin, BaseMinifiedModeModelClass):
         batch_size: int | None = None,
     ) -> np.ndarray:
         """Return the latent representation for each cell.
-        
+
         Parameters
         ----------
         adata
@@ -189,7 +193,7 @@ class IRVI(UnsupervisedTrainingMixin, BaseMinifiedModeModelClass):
             Give mean of distribution or sample from it.
         batch_size
             Minibatch size for data loading into model. Defaults to `scvi.settings.batch_size`.
-            
+
         Returns
         -------
         Low-dimensional representation for each cell or batch.
@@ -229,7 +233,7 @@ class IRVI(UnsupervisedTrainingMixin, BaseMinifiedModeModelClass):
         batch_size: int | None = None,
     ) -> np.ndarray:
         """Return reconstructed gene expression for each cell.
-        
+
         Parameters
         ----------
         adata
@@ -239,7 +243,7 @@ class IRVI(UnsupervisedTrainingMixin, BaseMinifiedModeModelClass):
             Indices of cells in adata to use. If `None`, all cells are used.
         batch_size
             Minibatch size for data loading into model. Defaults to `scvi.settings.batch_size`.
-            
+
         Returns
         -------
         Reconstructed gene expression for each cell.
@@ -281,7 +285,7 @@ class IRVI(UnsupervisedTrainingMixin, BaseMinifiedModeModelClass):
         batch_size: int | None = None,
     ) -> dict[str, np.ndarray]:
         """Return separate embeddings for each modality before fusion.
-        
+
         Parameters
         ----------
         adata
@@ -291,7 +295,7 @@ class IRVI(UnsupervisedTrainingMixin, BaseMinifiedModeModelClass):
             Indices of cells in adata to use. If `None`, all cells are used.
         batch_size
             Minibatch size for data loading into model. Defaults to `scvi.settings.batch_size`.
-            
+
         Returns
         -------
         Dictionary containing 'gene' and 'tcr' embeddings before fusion.

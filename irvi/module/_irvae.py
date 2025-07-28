@@ -3,7 +3,6 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING
 
-import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -15,8 +14,6 @@ from torch.distributions import Normal
 
 if TYPE_CHECKING:
     from typing import Literal
-
-    from torch.distributions import Distribution
 
 logger = logging.getLogger(__name__)
 
@@ -51,7 +48,7 @@ class AminoAcidTokenizer:
     def __init__(self, max_length: int = 20, add_special_tokens: bool = True):
         """
         Initialize amino acid tokenizer.
-        
+
         Parameters
         ----------
         max_length : int
@@ -91,14 +88,14 @@ class AminoAcidTokenizer:
     def encode(self, sequence: str, add_special_tokens: bool = None) -> torch.Tensor:
         """
         Encode amino acid sequence to token IDs.
-        
+
         Parameters
         ----------
         sequence : str
             Amino acid sequence (e.g., "CASSLAPGTQVQETQY")
         add_special_tokens : bool, optional
             Override class setting for special tokens
-            
+
         Returns
         -------
         torch.Tensor
@@ -138,12 +135,12 @@ class AminoAcidTokenizer:
     def encode_batch(self, sequences: list[str]) -> torch.Tensor:
         """
         Encode batch of sequences.
-        
+
         Parameters
         ----------
         sequences : list[str]
             List of amino acid sequences
-            
+
         Returns
         -------
         torch.Tensor
@@ -154,14 +151,14 @@ class AminoAcidTokenizer:
     def decode(self, token_ids: torch.Tensor, skip_special_tokens: bool = True) -> str:
         """
         Decode token IDs back to amino acid sequence.
-        
+
         Parameters
         ----------
         token_ids : torch.Tensor
             Token IDs tensor
         skip_special_tokens : bool
             Whether to skip special tokens in output
-            
+
         Returns
         -------
         str
@@ -187,12 +184,12 @@ class AminoAcidTokenizer:
     def create_attention_mask(self, token_ids: torch.Tensor) -> torch.Tensor:
         """
         Create attention mask for sequences.
-        
+
         Parameters
         ----------
         token_ids : torch.Tensor
             Token IDs tensor of shape (batch_size, seq_len) or (seq_len,)
-            
+
         Returns
         -------
         torch.Tensor
@@ -222,7 +219,7 @@ class PositionalEncoding(nn.Module):
 
     def forward(self, x):
         """Add positional encoding to input embeddings.
-        
+
         Parameters
         ----------
         x : torch.Tensor
@@ -294,12 +291,12 @@ class TCREncoder(nn.Module):
     def encode_sequences(self, sequences: list[str]) -> torch.Tensor:
         """
         Encode string sequences to token IDs.
-        
+
         Parameters
         ----------
         sequences : list[str]
             List of amino acid sequences
-            
+
         Returns
         -------
         torch.Tensor
@@ -310,7 +307,7 @@ class TCREncoder(nn.Module):
     def forward(self, inputs, attention_mask=None):
         """
         Forward pass through TCR encoder.
-        
+
         Parameters
         ----------
         inputs : torch.Tensor or list[str]
@@ -370,14 +367,14 @@ class TCREncoder(nn.Module):
     ) -> torch.Tensor:
         """
         Pool sequence representations to get single vector per sequence.
-        
+
         Parameters
         ----------
         hidden_states : torch.Tensor
             Hidden states from transformer of shape (batch_size, seq_len, d_model)
         attention_mask : torch.Tensor
             Attention mask of shape (batch_size, seq_len)
-            
+
         Returns
         -------
         torch.Tensor
@@ -422,14 +419,14 @@ class TCREncoder(nn.Module):
     def get_attention_weights(self, inputs, attention_mask=None):
         """
         Get attention weights for visualization.
-        
+
         Parameters
         ----------
         inputs : torch.Tensor or list[str]
             Input sequences
         attention_mask : torch.Tensor, optional
             Attention mask
-            
+
         Returns
         -------
         dict
@@ -442,10 +439,10 @@ class TCREncoder(nn.Module):
 
 class IRVAE(BaseMinifiedModeModuleClass):
     """Multimodal Transformer-based Variational Autoencoder for gene expression and TCR data.
-    
+
     This model combines single-cell gene expression data with T cell receptor
     amino acid sequences using a transformer-based architecture within a VAE framework.
-    
+
     Parameters
     ----------
     n_input_genes
@@ -598,10 +595,13 @@ class IRVAE(BaseMinifiedModeModuleClass):
 
     @auto_move_data
     def inference(
-        self, x, tcr, n_samples=1,
+        self,
+        x,
+        tcr,
+        n_samples=1,
     ):
         """High level inference method.
-        
+
         Parameters
         ----------
         x : torch.Tensor
@@ -646,7 +646,9 @@ class IRVAE(BaseMinifiedModeModuleClass):
 
     @auto_move_data
     def generative(
-        self, z, library,
+        self,
+        z,
+        library,
     ):
         """Runs the generative model."""
         # Decode to gene expression

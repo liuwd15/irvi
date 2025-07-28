@@ -1,10 +1,7 @@
 """Custom field for handling TCR amino acid sequence strings."""
 
-from typing import Union
-
 import numpy as np
 import pandas as pd
-import rich
 from anndata import AnnData
 from scvi.data.fields._base_field import BaseAnnDataField
 
@@ -12,10 +9,10 @@ from scvi.data.fields._base_field import BaseAnnDataField
 class TCRField(BaseAnnDataField):
     """
     Field for handling TCR amino acid sequence strings.
-    
+
     This field automatically tokenizes amino acid sequence strings into
     integer representations suitable for transformer models.
-    
+
     Parameters
     ----------
     registry_key
@@ -161,7 +158,10 @@ class TCRField(BaseAnnDataField):
         }
 
     def transfer_field(
-        self, state_registry: dict, adata_target: AnnData, **kwargs,
+        self,
+        state_registry: dict,
+        adata_target: AnnData,
+        **kwargs,
     ) -> dict:
         """Transfer field to new AnnData object."""
         # For transfer, we need to tokenize the target data using the same tokenizer
@@ -178,7 +178,6 @@ class TCRField(BaseAnnDataField):
     def view_state_registry(self, state_registry: dict):
         """View state registry in a formatted table."""
         try:
-            import rich.table
             from rich.table import Table
 
             t = Table(title=f"TCR Sequence Field Registry: {self.registry_key}")

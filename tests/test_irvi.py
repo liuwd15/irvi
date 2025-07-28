@@ -1,10 +1,9 @@
 """Tests for IRVI package."""
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import anndata as ad
 import numpy as np
-import pandas as pd
 import pytest
 import torch
 
@@ -229,9 +228,11 @@ class TestIRVAE:
         with torch.no_grad():
             inference_outputs = vae_module.inference(gene_data, tcr_sequences)
             generative_outputs = vae_module.generative(
-                inference_outputs["z"][0]
-                if inference_outputs["z"].dim() == 3
-                else inference_outputs["z"],
+                (
+                    inference_outputs["z"][0]
+                    if inference_outputs["z"].dim() == 3
+                    else inference_outputs["z"]
+                ),
                 inference_outputs["library"],
             )
 
