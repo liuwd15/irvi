@@ -2,7 +2,7 @@
 
 __version__ = "0.1.0"
 
-# Define exports 
+# Define exports
 __all__ = [
     "IRVI",
     "IRVAE",

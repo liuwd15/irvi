@@ -5,18 +5,18 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 import torch
-
 from scvi import REGISTRY_KEYS, settings
 from scvi.data import AnnDataManager
 from scvi.data.fields import LayerField
 from scvi.model.base import BaseMinifiedModeModelClass, UnsupervisedTrainingMixin
 from scvi.utils import setup_anndata_dsp
-from ..module import IRVAE
+
 from ..data import TCRField
+from ..module import IRVAE
 
 if TYPE_CHECKING:
     from typing import Literal
-    
+
     from anndata import AnnData
 
 logger = logging.getLogger(__name__)
@@ -80,7 +80,7 @@ class IRVI(UnsupervisedTrainingMixin, BaseMinifiedModeModelClass):
     >>> # Get latent embeddings
     >>> latent = model.get_latent_representation()
     """
-    
+
     def __init__(
         self,
         adata: AnnData | None = None,
@@ -96,16 +96,16 @@ class IRVI(UnsupervisedTrainingMixin, BaseMinifiedModeModelClass):
         **model_kwargs,
     ):
         super().__init__(adata, **model_kwargs)
-        
+
         self.n_latent = n_latent
         self.n_hidden = n_hidden
         self.gene_likelihood = gene_likelihood
-        
+
         if self.adata is not None:
             n_input_genes = self.adata_manager.summary_stats.n_vars
         else:
             n_input_genes = None
-            
+
         self.module = IRVAE(
             n_input_genes=n_input_genes,
             n_latent=n_latent,
@@ -124,15 +124,11 @@ class IRVI(UnsupervisedTrainingMixin, BaseMinifiedModeModelClass):
             f"tcr_d_model: {tcr_d_model}, gene_likelihood: {gene_likelihood}"
         )
         self.init_params_ = self._get_init_params(locals())
-        
+
     @classmethod
     @setup_anndata_dsp.dedent
     def setup_anndata(
-        cls,
-        adata: AnnData,
-        layer: str | None = None,
-        tcr_key: str = "TCR",
-        **kwargs,
+        cls, adata: AnnData, layer: str | None = None, tcr_key: str = "TCR", **kwargs,
     ) -> AnnData:
         """%(summary)s.
         
@@ -152,25 +148,27 @@ class IRVI(UnsupervisedTrainingMixin, BaseMinifiedModeModelClass):
         %(return_adata)s
         """
         setup_method_args = cls._get_setup_method_args(**locals())
-        
+
         # Validate TCR data
         if tcr_key not in adata.obs.columns and tcr_key not in adata.obsm:
-            raise ValueError(f"TCR data not found in adata.obs['{tcr_key}'] or adata.obsm['{tcr_key}']")
-        
+            raise ValueError(
+                f"TCR data not found in adata.obs['{tcr_key}'] or adata.obsm['{tcr_key}']"
+            )
+
         # Register fields
         anndata_fields = [
             LayerField(REGISTRY_KEYS.X_KEY, layer, is_count_data=True),
-            TCRField('TCR', tcr_key, max_length=20),
+            TCRField("TCR", tcr_key, max_length=20),
         ]
-        
+
         adata_manager = AnnDataManager(
             fields=anndata_fields, setup_method_args=setup_method_args
         )
         adata_manager.register_fields(adata, **kwargs)
         cls.register_manager(adata_manager)
-        
+
         return adata
-        
+
     def get_latent_representation(
         self,
         adata: AnnData | None = None,
@@ -197,21 +195,21 @@ class IRVI(UnsupervisedTrainingMixin, BaseMinifiedModeModelClass):
         Low-dimensional representation for each cell or batch.
         """
         adata = self._validate_anndata(adata)
-        
+
         if indices is None:
             indices = np.arange(adata.n_obs)
         if batch_size is None:
             batch_size = settings.batch_size
-            
+
         scdl = self._make_data_loader(
             adata=adata, indices=indices, batch_size=batch_size
         )
-        
+
         latent = []
         for tensors in scdl:
             inference_inputs = self.module._get_inference_input(tensors)
             outputs = self.module.inference(**inference_inputs)
-            
+
             if give_mean:
                 qz_m = outputs["qz_m"]
                 latent.append(qz_m.detach().cpu())
@@ -221,9 +219,9 @@ class IRVI(UnsupervisedTrainingMixin, BaseMinifiedModeModelClass):
                 if z.dim() == 3:
                     z = z.squeeze(0)  # Remove sample dimension
                 latent.append(z.detach().cpu())
-                
+
         return torch.cat(latent, dim=0).numpy()
-        
+
     def get_gene_expression_reconstruction(
         self,
         adata: AnnData | None = None,
@@ -247,35 +245,35 @@ class IRVI(UnsupervisedTrainingMixin, BaseMinifiedModeModelClass):
         Reconstructed gene expression for each cell.
         """
         adata = self._validate_anndata(adata)
-        
+
         if indices is None:
             indices = np.arange(adata.n_obs)
         if batch_size is None:
             batch_size = settings.batch_size
-            
+
         scdl = self._make_data_loader(
             adata=adata, indices=indices, batch_size=batch_size
         )
-        
+
         reconstructed = []
         for tensors in scdl:
             inference_inputs = self.module._get_inference_input(tensors)
             inference_outputs = self.module.inference(**inference_inputs)
-            
+
             generative_inputs = self.module._get_generative_input(
                 tensors, inference_outputs
             )
             generative_outputs = self.module.generative(**generative_inputs)
-            
+
             px_rate = generative_outputs["px_rate"]
             # Handle different z shapes (n_samples, batch_size, features) vs (batch_size, features)
             if px_rate.dim() == 3:
                 # If we have multiple samples, take the first one
                 px_rate = px_rate[0]
             reconstructed.append(px_rate.detach().cpu())
-            
+
         return torch.cat(reconstructed, dim=0).numpy()
-        
+
     def get_modality_embeddings(
         self,
         adata: AnnData | None = None,
@@ -299,26 +297,26 @@ class IRVI(UnsupervisedTrainingMixin, BaseMinifiedModeModelClass):
         Dictionary containing 'gene' and 'tcr' embeddings before fusion.
         """
         adata = self._validate_anndata(adata)
-        
+
         if indices is None:
             indices = np.arange(adata.n_obs)
         if batch_size is None:
             batch_size = settings.batch_size
-            
+
         scdl = self._make_data_loader(
             adata=adata, indices=indices, batch_size=batch_size
         )
-        
+
         gene_embeddings = []
         tcr_embeddings = []
-        
+
         for tensors in scdl:
             inference_inputs = self.module._get_inference_input(tensors)
             outputs = self.module.inference(**inference_inputs)
-            
+
             gene_embeddings.append(outputs["gene_hidden"].detach().cpu())
             tcr_embeddings.append(outputs["tcr_hidden"].detach().cpu())
-            
+
         return {
             "gene": torch.cat(gene_embeddings, dim=0).numpy(),
             "tcr": torch.cat(tcr_embeddings, dim=0).numpy(),
