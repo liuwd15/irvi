@@ -98,8 +98,11 @@ class TCRField(BaseAnnDataField):
             if not isinstance(seq, str):
                 continue
 
-            # Check for invalid amino acids
-            invalid_chars = set(seq.upper()) - set(self.tokenizer.AMINO_ACIDS)
+            # Check for invalid amino acids (allow separator token '_')
+            valid_chars = set(self.tokenizer.AMINO_ACIDS) | {
+                "_"
+            }  # Include separator token
+            invalid_chars = set(seq.upper()) - valid_chars
             if invalid_chars:
                 print(
                     f"Warning: Sequence {i} contains invalid amino acids: {invalid_chars}"
