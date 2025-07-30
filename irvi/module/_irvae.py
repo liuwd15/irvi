@@ -19,7 +19,15 @@ logger = logging.getLogger(__name__)
 
 
 class AminoAcidTokenizer:
-    """Tokenizer for amino acid sequences."""
+    """Tokenizer for amino acid sequences with support for paired TCR chains.
+
+    This tokenizer handles single amino acid sequences or paired TCR sequences
+    (e.g., alpha and beta chains) separated by an underscore '_' character.
+
+    Example:
+        - Single chain: "CASSLAPGTQVQETQY"
+        - Paired chains: "CASSLAPGTQVQETQY_CSVGDTQYF"
+    """
 
     # Standard 20 amino acids
     AMINO_ACIDS = [
@@ -45,7 +53,7 @@ class AminoAcidTokenizer:
         "V",
     ]
 
-    def __init__(self, max_length: int = 20, add_special_tokens: bool = True):
+    def __init__(self, max_length: int = 30, add_special_tokens: bool = True):
         """
         Initialize amino acid tokenizer.
 
@@ -69,10 +77,12 @@ class AminoAcidTokenizer:
             self.vocab["<UNK>"] = 1
             self.vocab["<START>"] = 2
             self.vocab["<END>"] = 3
-            start_idx = 4
+            self.vocab["_"] = 4  # Separator token for chain break
+            start_idx = 5
         else:
             self.vocab["<PAD>"] = 0  # Always need padding
-            start_idx = 1
+            self.vocab["_"] = 1  # Separator token for chain break (always included)
+            start_idx = 2
 
         # Add amino acids
         for i, aa in enumerate(self.AMINO_ACIDS):
@@ -83,6 +93,8 @@ class AminoAcidTokenizer:
 
         self.vocab_size = len(self.vocab)
         self.pad_token_id = self.vocab["<PAD>"]
+        self.unk_token_id = self.vocab.get("<UNK>", 0)
+        self.sep_token_id = self.vocab["_"]  # Add reference to separator token
         self.unk_token_id = self.vocab.get("<UNK>", 0)
 
     def encode(self, sequence: str, add_special_tokens: bool = None) -> torch.Tensor:
@@ -196,6 +208,60 @@ class AminoAcidTokenizer:
             Attention mask (1 for real tokens, 0 for padding)
         """
         return (token_ids != self.pad_token_id).long()
+
+    def create_paired_sequence(self, chain1: str, chain2: str) -> str:
+        """
+        Create a paired TCR sequence with separator.
+
+        Parameters
+        ----------
+        chain1 : str
+            First TCR chain (e.g., alpha chain)
+        chain2 : str
+            Second TCR chain (e.g., beta chain)
+
+        Returns
+        -------
+        str
+            Paired sequence with separator: "chain1_chain2"
+
+        Examples
+        --------
+        >>> tokenizer = AminoAcidTokenizer()
+        >>> paired = tokenizer.create_paired_sequence("CASSLAPGTQ", "CSVGDTQYF")
+        >>> print(paired)  # "CASSLAPGTQ_CSVGDTQYF"
+        """
+        return f"{chain1.strip()}_{chain2.strip()}"
+
+    def split_paired_sequence(self, paired_sequence: str) -> tuple[str, str]:
+        """
+        Split a paired TCR sequence into individual chains.
+
+        Parameters
+        ----------
+        paired_sequence : str
+            Paired sequence with separator: "chain1_chain2"
+
+        Returns
+        -------
+        tuple[str, str]
+            Tuple of (chain1, chain2)
+
+        Examples
+        --------
+        >>> tokenizer = AminoAcidTokenizer()
+        >>> chain1, chain2 = tokenizer.split_paired_sequence("CASSLAPGTQ_CSVGDTQYF")
+        >>> print(chain1, chain2)  # "CASSLAPGTQ" "CSVGDTQYF"
+        """
+        parts = paired_sequence.split("_")
+        if len(parts) == 2:
+            return parts[0].strip(), parts[1].strip()
+        elif len(parts) == 1:
+            # Single chain - return it as first chain, empty second chain
+            return parts[0].strip(), ""
+        else:
+            # Multiple separators - join all but last as first chain
+            return "_".join(parts[:-1]).strip(), parts[-1].strip()
 
 
 class PositionalEncoding(nn.Module):

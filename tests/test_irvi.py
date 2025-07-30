@@ -22,17 +22,23 @@ class TestAminoAcidTokenizer:
 
         assert tokenizer.max_length == 20
         assert tokenizer.add_special_tokens is True
-        assert tokenizer.vocab_size == 24  # 4 special + 20 amino acids
+        assert (
+            tokenizer.vocab_size == 25
+        )  # 5 special tokens (PAD, UNK, START, END, _) + 20 amino acids
         assert tokenizer.pad_token_id == 0
         assert tokenizer.unk_token_id == 1
+        assert tokenizer.sep_token_id == 4  # Test the new separator token
 
     def test_tokenizer_without_special_tokens(self):
         """Test tokenizer initialization without special tokens."""
         tokenizer = AminoAcidTokenizer(max_length=15, add_special_tokens=False)
 
-        assert tokenizer.vocab_size == 21  # 1 PAD + 20 amino acids
+        assert tokenizer.vocab_size == 22  # 1 PAD + 1 separator (_) + 20 amino acids
         assert tokenizer.pad_token_id == 0
         assert tokenizer.unk_token_id == 0
+        assert (
+            tokenizer.sep_token_id == 1
+        )  # Separator token position when no special tokens
 
     def test_encode_sequence(self):
         """Test encoding amino acid sequences."""
@@ -89,6 +95,48 @@ class TestAminoAcidTokenizer:
         # Should contain UNK token
         assert tokenizer.unk_token_id in encoded
 
+    def test_paired_tcr_sequences(self):
+        """Test handling of paired TCR sequences with separator."""
+        tokenizer = AminoAcidTokenizer(max_length=20, add_special_tokens=True)
+
+        # Test creating paired sequence
+        chain1 = "CASSLAPGTQ"
+        chain2 = "CSVGDTQYF"
+        paired = tokenizer.create_paired_sequence(chain1, chain2)
+        assert paired == "CASSLAPGTQ_CSVGDTQYF"
+
+        # Test encoding paired sequence
+        encoded = tokenizer.encode(paired)
+        assert encoded.shape == (20,)
+        assert tokenizer.sep_token_id in encoded  # Should contain separator token
+
+        # Test splitting paired sequence
+        split_chain1, split_chain2 = tokenizer.split_paired_sequence(paired)
+        assert split_chain1 == chain1
+        assert split_chain2 == chain2
+
+        # Test decoding
+        decoded = tokenizer.decode(encoded)
+        assert "_" in decoded  # Should contain separator
+
+    def test_single_chain_split(self):
+        """Test splitting behavior with single chain."""
+        tokenizer = AminoAcidTokenizer(max_length=15, add_special_tokens=True)
+
+        # Single chain should return empty second chain
+        chain1, chain2 = tokenizer.split_paired_sequence("CASSLAPGTQ")
+        assert chain1 == "CASSLAPGTQ"
+        assert chain2 == ""
+
+    def test_separator_token_properties(self):
+        """Test separator token properties."""
+        tokenizer = AminoAcidTokenizer(max_length=10, add_special_tokens=True)
+
+        # Check separator token is in vocabulary
+        assert "_" in tokenizer.vocab
+        assert tokenizer.sep_token_id == tokenizer.vocab["_"]
+        assert tokenizer.inverse_vocab[tokenizer.sep_token_id] == "_"
+
 
 class TestTCREncoder:
     """Test the TCREncoder class."""
@@ -102,7 +150,7 @@ class TestTCREncoder:
         """Test TCR encoder initialization."""
         assert tcr_encoder.d_model == 64
         assert tcr_encoder.max_length == 10
-        assert tcr_encoder.tokenizer.vocab_size == 24
+        assert tcr_encoder.tokenizer.vocab_size == 25  # Updated for new separator token
 
     def test_encode_string_sequences(self, tcr_encoder):
         """Test encoding string sequences."""
@@ -208,7 +256,7 @@ class TestIRVAE:
         assert outputs["tcr_logits"].shape == (
             batch_size,
             20,
-            24,
+            25,  # Updated vocab size with separator token
         )  # seq_len, vocab_size
 
     def test_loss_computation(self, vae_module):
